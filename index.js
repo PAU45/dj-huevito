@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
-import fs from 'fs';
 
 const client = new Client({
     intents: [
@@ -15,24 +14,46 @@ const client = new Client({
 
 const prefix = '!';
 const PASSWORD = 'pato';
+let botToken = process.env.DISCORD_TOKEN || null; // Token inicial
 
 client.on('ready', () => {
-    console.log(`${client.user.tag} ha iniciado sesión!`);
+    console.log(`✅ ${client.user.tag} ha iniciado sesión!`);
 });
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
     if (message.content === `${prefix}ping`) {
-        message.channel.send('🏓 Pong!');
+        return message.channel.send('🏓 Pong!');
     }
 
+    // Comando para cambiar el token
+    if (message.content.startsWith(`${prefix}token`)) {
+        const args = message.content.split(' ');
+        if (args.length < 3) {
+            return message.channel.send('⚠️ Uso correcto: `!token <contraseña> <nuevo_token>`');
+        }
+
+        const password = args[1];
+        const newToken = args[2];
+
+        if (password !== PASSWORD) {
+            return message.channel.send('❌ Contraseña incorrecta.');
+        }
+
+        botToken = newToken;
+        message.channel.send('✅ Token actualizado. Reiniciando bot...');
+        await message.delete();
+        restartBot();
+    }
+
+    // Comando para reproducir música
     if (message.content.startsWith(`${prefix}play`)) {
         const args = message.content.split(' ');
         const songUrl = args[1];
 
-        if (!songUrl) {
-            return message.channel.send('❌ Por favor, proporciona una URL válida de YouTube.');
+        if (!songUrl || !ytdl.validateURL(songUrl)) {
+            return message.channel.send('❌ Proporciona una URL válida de YouTube.');
         }
 
         const channel = message.member.voice.channel;
@@ -76,25 +97,18 @@ client.on('messageCreate', async (message) => {
             message.channel.send('❌ Hubo un error al intentar reproducir la canción.');
         }
     }
-
-    if (message.content.startsWith(`${prefix}token`)) {
-        const args = message.content.split(' ');
-        if (args.length < 3) {
-            return message.channel.send('⚠️ Uso correcto: `!token CONTRASEÑA NUEVO_TOKEN`');
-        }
-
-        const password = args[1];
-        const newToken = args[2];
-
-        if (password !== PASSWORD) {
-            return message.channel.send('❌ Contraseña incorrecta.');
-        }
-
-        fs.writeFileSync('.env', `DISCORD_TOKEN=${newToken}\n`);
-        message.channel.send('✅ Token actualizado con éxito. Reiniciando bot...');
-        await message.delete();
-        process.exit(1);
-    }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+// Función para reiniciar el bot con el nuevo token
+async function restartBot() {
+    console.log('🔄 Reiniciando bot con nuevo token...');
+    client.destroy();
+    client.login(botToken).catch(err => console.error('❌ Error al iniciar sesión:', err));
+}
+
+// Iniciar sesión solo si hay un token
+if (botToken) {
+    client.login(botToken).catch(err => console.error('❌ Error al iniciar sesión:', err));
+} else {
+    console.error('❌ No se ha proporcionado un token.');
+}
