@@ -14,7 +14,7 @@ const client = new Client({
 });
 
 const prefix = '!';
-const PASSWORD = 'mi_contraseña_segura';
+const PASSWORD = 'pato';
 
 client.on('ready', () => {
     console.log(`${client.user.tag} ha iniciado sesión!`);
