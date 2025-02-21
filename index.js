@@ -13,6 +13,7 @@ const client = new Client({
 });
 
 const prefix = '!';
+let isConnectionDestroyed = false; // Bandera para evitar destruir la conexión varias veces
 
 client.on('ready', () => {
     console.log(`${client.user.tag} ha iniciado sesión!`);
@@ -64,13 +65,19 @@ client.on('messageCreate', async (message) => {
             message.channel.send(`🎶 Reproduciendo: ${songUrl}`);
 
             player.on(AudioPlayerStatus.Idle, () => {
-                connection.destroy();
+                if (!isConnectionDestroyed) {
+                    connection.destroy();
+                    isConnectionDestroyed = true; // Marcar que la conexión ha sido destruida
+                }
             });
 
             player.on('error', (error) => {
                 console.error('❌ Error en el reproductor de audio:', error);
                 message.channel.send('❌ Hubo un error al reproducir la canción.');
-                connection.destroy();
+                if (!isConnectionDestroyed) {
+                    connection.destroy();
+                    isConnectionDestroyed = true;
+                }
             });
 
         } catch (error) {
