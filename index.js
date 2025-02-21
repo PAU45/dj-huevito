@@ -78,9 +78,4 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// Iniciar sesión solo si hay un token
-if (botToken) {
-    client.login(botToken).catch(err => console.error('❌ Error al iniciar sesión:', err));
-} else {
-    console.error('❌ No se ha proporcionado un token.');
-}
+client.login(process.env.DISCORD_TOKEN);
