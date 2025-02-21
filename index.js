@@ -13,7 +13,7 @@ const client = new Client({
 });
 
 const prefix = '!';
-const botToken = process.env.DISCORD_TOKEN;
+
 
 client.on('ready', () => {
     console.log(`✅ ${client.user.tag} ha iniciado sesión!`);
