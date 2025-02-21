@@ -14,25 +14,23 @@ const client = new Client({
 
 const prefix = '!';
 
-
 client.on('ready', () => {
-    console.log(`✅ ${client.user.tag} ha iniciado sesión!`);
+    console.log(`${client.user.tag} ha iniciado sesión!`);
 });
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
     if (message.content === `${prefix}ping`) {
-        return message.channel.send('🏓 Pong!');
+        message.channel.send('🏓 Pong!');
     }
 
-    // Comando para reproducir música
     if (message.content.startsWith(`${prefix}play`)) {
         const args = message.content.split(' ');
         const songUrl = args[1];
 
-        if (!songUrl || !ytdl.validateURL(songUrl)) {
-            return message.channel.send('❌ Proporciona una URL válida de YouTube.');
+        if (!songUrl) {
+            return message.channel.send('❌ Por favor, proporciona una URL válida de YouTube.');
         }
 
         const channel = message.member.voice.channel;
@@ -41,7 +39,10 @@ client.on('messageCreate', async (message) => {
         }
 
         try {
+            // Crear el reproductor de audio
             const player = createAudioPlayer();
+
+            // Conectar al canal de voz
             const connection = joinVoiceChannel({
                 channelId: channel.id,
                 guildId: message.guild.id,
@@ -54,6 +55,7 @@ client.on('messageCreate', async (message) => {
 
             console.log('🎵 Obteniendo stream de audio...');
             const stream = ytdl(songUrl, { filter: 'audioonly', quality: 'highestaudio' });
+
             const resource = createAudioResource(stream);
 
             player.play(resource);
