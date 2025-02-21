@@ -13,8 +13,7 @@ const client = new Client({
 });
 
 const prefix = '!';
-const PASSWORD = 'pato';
-let botToken = process.env.DISCORD_TOKEN || null; // Token inicial
+const botToken = process.env.DISCORD_TOKEN;
 
 client.on('ready', () => {
     console.log(`✅ ${client.user.tag} ha iniciado sesión!`);
@@ -25,26 +24,6 @@ client.on('messageCreate', async (message) => {
 
     if (message.content === `${prefix}ping`) {
         return message.channel.send('🏓 Pong!');
-    }
-
-    // Comando para cambiar el token
-    if (message.content.startsWith(`${prefix}token`)) {
-        const args = message.content.split(' ');
-        if (args.length < 3) {
-            return message.channel.send('⚠️ Uso correcto: `!token <contraseña> <nuevo_token>`');
-        }
-
-        const password = args[1];
-        const newToken = args[2];
-
-        if (password !== PASSWORD) {
-            return message.channel.send('❌ Contraseña incorrecta.');
-        }
-
-        botToken = newToken;
-        message.channel.send('✅ Token actualizado. Reiniciando bot...');
-        await message.delete();
-        restartBot();
     }
 
     // Comando para reproducir música
@@ -98,13 +77,6 @@ client.on('messageCreate', async (message) => {
         }
     }
 });
-
-// Función para reiniciar el bot con el nuevo token
-async function restartBot() {
-    console.log('🔄 Reiniciando bot con nuevo token...');
-    client.destroy();
-    client.login(botToken).catch(err => console.error('❌ Error al iniciar sesión:', err));
-}
 
 // Iniciar sesión solo si hay un token
 if (botToken) {
