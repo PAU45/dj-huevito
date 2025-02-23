@@ -9,6 +9,7 @@ const {
 } = require('@discordjs/voice');
 const ytdl = require('@distube/ytdl-core');
 const { pipeline, PassThrough } = require('stream');
+const { CookieJar } = require('tough-cookie');
 
 const client = new Client({
     intents: [
@@ -22,9 +23,22 @@ const client = new Client({
 const prefix = '!';
 let connection;  // Mantener la conexión para evitar múltiples instancias
 
-// Función para obtener las cookies desde la variable de entorno
+// Función para obtener las cookies desde la variable de entorno en formato JSON
 function getCookies() {
-    return process.env.YTDL_COOKIES || "";
+    try {
+        const cookieData = JSON.parse(process.env.YTDL_COOKIES || "{}");
+        if (!cookieData.cookies) return null;
+
+        const cookieJar = new CookieJar();
+        cookieData.cookies.forEach(cookie => {
+            cookieJar.setCookieSync(`${cookie.name}=${cookie.value}`, `https://${cookie.domain}`);
+        });
+
+        return { cookieJar };
+    } catch (error) {
+        console.error("❌ Error al parsear las cookies:", error);
+        return {};
+    }
 }
 
 client.on('ready', () => {
@@ -59,11 +73,7 @@ client.on('messageCreate', async (message) => {
 
         try {
             // Obtener información del video usando cookies
-            const info = await ytdl.getInfo(songUrl, {
-                requestOptions: {
-                    headers: { cookie: getCookies() }
-                }
-            });
+            const info = await ytdl.getInfo(songUrl, getCookies());
 
             if (!info) {
                 return message.channel.send('❌ No se pudo obtener información del video.');
@@ -92,9 +102,7 @@ client.on('messageCreate', async (message) => {
                 filter: 'audioonly',
                 quality: 'highestaudio',
                 highWaterMark: 1 << 25, // Mejora el buffer
-                requestOptions: {
-                    headers: { cookie: getCookies() }
-                }
+                ...getCookies() // Agregar cookies correctamente
             });
 
             const passthrough = new PassThrough();
