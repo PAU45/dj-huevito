@@ -2,9 +2,8 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 const ytdl = require('@distube/ytdl-core'); 
-const fetch = require('node-fetch'); // Importa la biblioteca fetch
-const ffmpeg = require('ffmpeg-static');
-const fs = require('fs'); // Importa el módulo fs
+const fs = require('fs');
+const http = require('http'); // Importa el módulo http
 
 const client = new Client({
     intents: [
@@ -30,73 +29,58 @@ client.on('ready', () => {
     console.log(`${client.user.tag} ha iniciado sesión!`);
 });
 
-client.on('messageCreate', async (message) => {
-    console.log(`Mensaje recibido: ${message.content}`);
+// Crear un servidor HTTP para evitar advertencias sobre puertos
+const server = http.createServer();
+const port = process.env.PORT || 10000; // Usa el puerto de la variable de entorno o 10000 como predeterminado
 
+server.listen(port, () => {
+    console.log(`Servidor HTTP escuchando en el puerto ${port}`);
+});
+
+client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    if (message.content === `${prefix}ping`) {
-        console.log('Comando !ping recibido');
-        message.channel.send('¡Pong!');
-    }
-
     if (message.content.startsWith(`${prefix}play`)) {
-        console.log('Comando !play recibido');
         const args = message.content.split(' ');
         const songUrl = args[1];
 
         if (!songUrl) {
-            console.log('URL no proporcionada');
             return message.channel.send('Por favor, proporciona una URL válida de YouTube.');
         }
 
         const channel = message.member.voice.channel;
         if (!channel) {
-            console.log('El usuario no está en un canal de voz');
             return message.channel.send('¡Necesitas unirte a un canal de voz primero!');
         }
 
         try {
-            // Validar la URL y obtener información del video
             const info = await ytdl.getInfo(songUrl, {
                 requestOptions: {
                     headers: {
-                        'Cookie': cookieString // Agrega las cookies a tu solicitud
+                        'Cookie': cookieString
                     }
                 }
             });
-            if (!info) {
-                return message.channel.send('No se pudo obtener información del video.');
-            }
 
-            // Conectar al canal de voz
             const connection = joinVoiceChannel({
                 channelId: channel.id,
                 guildId: message.guild.id,
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            connection.on(VoiceConnectionStatus.Ready, () => {
-                console.log('El bot se ha conectado al canal de voz!');
-            });
-
-            // Crear el stream de audio con ytdl-core
             const stream = ytdl(songUrl, { filter: 'audioonly', quality: 'highestaudio' });
             const resource = createAudioResource(stream);
-
             const player = createAudioPlayer();
+
             player.play(resource);
             connection.subscribe(player);
 
-            // Manejar eventos del reproductor
             player.on(AudioPlayerStatus.Idle, () => {
-                console.log('El bot se ha desconectado del canal de voz.');
                 connection.destroy();
             });
 
             player.on('error', (error) => {
                 console.error('Error en el reproductor de audio:', error);
-                message.channel.send('Hubo un error al reproducir la canción.');
                 connection.destroy();
             });
 
