@@ -39,7 +39,7 @@ client.once('ready', () => {
 });
 
 // Comando para reproducir audio
-client.on('messageCreate', (message) => {
+client.on('messageCreate', async (message) => {
     if (message.content.startsWith(`${prefix}play`)) {
         console.log('Comando !play recibido');
         const args = message.content.split(' ');
@@ -111,4 +111,3 @@ client.on('messageCreate', (message) => {
 
 // Iniciar el bot con tu token
 client.login(process.env.DISCORD_TOKEN);
-
