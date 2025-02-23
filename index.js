@@ -110,4 +110,5 @@ client.on('messageCreate', (message) => {
 });
 
 // Iniciar el bot con tu token
-client.login('DISCORD_TOKEN');
+client.login(process.env.DISCORD_TOKEN);
+
