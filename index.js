@@ -1,6 +1,6 @@
 require('dotenv').config(); 
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const ytdl = require('@distube/ytdl-core'); 
 const fs = require('fs');
 const http = require('http'); // Importa el módulo http
@@ -16,17 +16,17 @@ const client = new Client({
 
 const prefix = '!';
 
-// Leer cookies desde cookies.json
+// Leer cookies desde cookies.js
 let cookies;
 try {
-    cookies = JSON.parse(fs.readFileSync('cookies.json', 'utf8'));
+    cookies = require('./cookies.js'); // Cambié a cookies.js
 } catch (err) {
     console.error('Error al leer el archivo de cookies:', err);
     cookies = []; // Si hay un error, inicializa como un arreglo vacío
 }
 
-// Convertir el arreglo de cookies en una cadena de texto
-const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+// Crear el agente de ytdl usando el nuevo formato de cookies
+const agent = ytdl.createAgent(cookies);
 
 client.on('ready', () => {
     console.log(`${client.user.tag} ha iniciado sesión!`);
@@ -58,11 +58,7 @@ client.on('messageCreate', async (message) => {
 
         try {
             const info = await ytdl.getInfo(songUrl, {
-                requestOptions: {
-                    headers: {
-                        'Cookie': cookieString
-                    }
-                }
+                agent // Usar el agente creado con cookies
             });
 
             const connection = joinVoiceChannel({
@@ -71,7 +67,7 @@ client.on('messageCreate', async (message) => {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            const stream = ytdl(songUrl, { filter: 'audioonly', quality: 'highestaudio' });
+            const stream = ytdl(songUrl, { filter: 'audioonly', quality: 'highestaudio', agent });
             const resource = createAudioResource(stream);
             const player = createAudioPlayer();
 
