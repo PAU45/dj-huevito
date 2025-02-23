@@ -2,7 +2,6 @@
   "name": "dj-huevito",
   "version": "1.0.0",
   "main": "index.js",
-
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,12 +10,14 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.18.0",
     "@distube/ytdl-core": "^4.16.4",
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
     "ffmpeg-static": "^5.2.0",
     "node-fetch": "^3.3.2",
+    "opusscript": "^0.0.8",
     "youtube-dl-exec": "^3.0.15"
   }
 }
