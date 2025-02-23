@@ -7,9 +7,8 @@ const {
     AudioPlayerStatus,
     VoiceConnectionStatus
 } = require('@discordjs/voice');
-const ytdl = require('@distube/ytdl-core');
-const { pipeline, PassThrough } = require('stream');
-const { CookieJar } = require('tough-cookie');
+const { exec } = require("youtube-dl-exec");
+const fs = require('fs');
 
 const client = new Client({
     intents: [
@@ -23,18 +22,10 @@ const client = new Client({
 const prefix = '!';
 let connection;  // Mantener la conexión para evitar múltiples instancias
 
-// Función para obtener las cookies desde la variable de entorno en formato JSON
+// Función para obtener cookies desde la variable de entorno
 function getCookies() {
     try {
-        const cookieData = JSON.parse(process.env.YTDL_COOKIES || "{}");
-        if (!cookieData.cookies) return null;
-
-        const cookieJar = new CookieJar();
-        cookieData.cookies.forEach(cookie => {
-            cookieJar.setCookieSync(`${cookie.name}=${cookie.value}`, `https://${cookie.domain}`);
-        });
-
-        return { cookieJar };
+        return JSON.parse(process.env.YTDL_COOKIES || "{}");
     } catch (error) {
         console.error("❌ Error al parsear las cookies:", error);
         return {};
@@ -60,7 +51,7 @@ client.on('messageCreate', async (message) => {
         const args = message.content.split(' ');
         const songUrl = args[1];
 
-        if (!songUrl || !ytdl.validateURL(songUrl)) {
+        if (!songUrl) {
             console.log('URL no válida');
             return message.channel.send('❌ Por favor, proporciona una URL válida de YouTube.');
         }
@@ -72,13 +63,6 @@ client.on('messageCreate', async (message) => {
         }
 
         try {
-            // Obtener información del video usando cookies
-            const info = await ytdl.getInfo(songUrl, getCookies());
-
-            if (!info) {
-                return message.channel.send('❌ No se pudo obtener información del video.');
-            }
-
             // Verificar si ya hay una conexión activa
             if (!connection || connection.state.status === VoiceConnectionStatus.Destroyed) {
                 connection = joinVoiceChannel({
@@ -97,20 +81,15 @@ client.on('messageCreate', async (message) => {
                 });
             }
 
-            // Crear el stream de audio con cookies
-            const stream = ytdl(songUrl, {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25, // Mejora el buffer
-                ...getCookies() // Agregar cookies correctamente
+            // Configuración de yt-dlp
+            const stream = exec(songUrl, {
+                output: "-",
+                format: "bestaudio[ext=webm]",
+                limitRate: "100K", // Evita detección como bot
+                cookies: JSON.stringify(getCookies()) // Usa cookies en JSON
             });
 
-            const passthrough = new PassThrough();
-            pipeline(stream, passthrough, (err) => {
-                if (err) console.error('❌ Error en el stream:', err);
-            });
-
-            const resource = createAudioResource(passthrough);
+            const resource = createAudioResource(stream);
             const player = createAudioPlayer();
 
             player.play(resource);
@@ -126,7 +105,7 @@ client.on('messageCreate', async (message) => {
                 message.channel.send('❌ Hubo un error al reproducir la canción.');
             });
 
-            message.channel.send(`🎶 Reproduciendo: **${info.videoDetails.title}**`);
+            message.channel.send(`🎶 Reproduciendo: **${songUrl}**`);
         } catch (error) {
             console.error('❌ Error al reproducir la canción:', error);
             message.channel.send('❌ Hubo un error al intentar reproducir la canción.');
