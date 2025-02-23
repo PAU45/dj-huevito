@@ -9,7 +9,6 @@ const {
 } = require('@discordjs/voice');
 const ytdl = require('@distube/ytdl-core');
 const { pipeline, PassThrough } = require('stream');
-const fs = require('fs');
 
 const client = new Client({
     intents: [
@@ -23,15 +22,9 @@ const client = new Client({
 const prefix = '!';
 let connection;  // Mantener la conexión para evitar múltiples instancias
 
-// Función para cargar las cookies desde cookies.txt
+// Función para obtener las cookies desde la variable de entorno
 function getCookies() {
-    const cookiesPath = 'cookies.txt';
-    if (fs.existsSync(cookiesPath)) {
-        return fs.readFileSync(cookiesPath, 'utf8');
-    } else {
-        console.warn('⚠️ No se encontró cookies.txt, YouTube puede bloquear la reproducción.');
-        return '';
-    }
+    return process.env.YTDL_COOKIES || "";
 }
 
 client.on('ready', () => {
