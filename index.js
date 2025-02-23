@@ -16,13 +16,13 @@ const client = new Client({
 
 const prefix = '!';
 
-// Leer las cookies desde el archivo cookies.txt
-let cookieString;
+// Leer cookies desde cookies.json
+let cookies;
 try {
-    cookieString = fs.readFileSync('cookies.txt', 'utf8').trim();
+    cookies = JSON.parse(fs.readFileSync('cookies.json', 'utf8'));
 } catch (err) {
     console.error('Error al leer el archivo de cookies:', err);
-    cookieString = ''; // Si hay un error, inicializa como cadena vacía
+    cookies = []; // Si hay un error, inicializa como un arreglo vacío
 }
 
 client.on('ready', () => {
