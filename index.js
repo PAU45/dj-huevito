@@ -1,51 +1,45 @@
-require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const {
-    joinVoiceChannel,
-    createAudioPlayer,
-    createAudioResource,
-    AudioPlayerStatus,
-    VoiceConnectionStatus
-} = require('@discordjs/voice');
-const { exec } = require("youtube-dl-exec");
+const { joinVoiceChannel, VoiceConnectionStatus } = require('@discordjs/voice');
 const fs = require('fs');
+const { exec } = require("youtube-dl-exec");
 
+// Configuración inicial del cliente de Discord
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates,
-    ],
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent],
 });
 
-const prefix = '!';
-let connection;  // Mantener la conexión para evitar múltiples instancias
+const prefix = '!'; // Prefijo del comando
+let connection = null; // Variable global para la conexión de voz
 
-// Función para obtener cookies desde la variable de entorno
-function getCookies() {
+// Guardar cookies en un archivo cookies.txt
+function saveCookiesToFile() {
     try {
-        return JSON.parse(process.env.YTDL_COOKIES || "{}");
+        const cookieData = JSON.parse(process.env.YTDL_COOKIES || "{}");
+        if (!cookieData.cookies) return;
+
+        // Crear el formato adecuado de cookies para yt-dlp
+        const cookieString = cookieData.cookies.map(cookie =>
+            `${cookie.domain}\tTRUE\t/\tTRUE\t2147483647\t${cookie.name}\t${cookie.value}`
+        ).join("\n");
+
+        // Guardar las cookies en el archivo cookies.txt
+        fs.writeFileSync("cookies.txt", cookieString);
+        console.log("✅ Cookies guardadas correctamente en cookies.txt");
     } catch (error) {
-        console.error("❌ Error al parsear las cookies:", error);
-        return {};
+        console.error("❌ Error al guardar cookies:", error);
     }
 }
 
-client.on('ready', () => {
-    console.log(`${client.user.tag} has logged in!`);
+// Llamar a la función para guardar las cookies al iniciar el bot
+saveCookiesToFile();
+
+// Evento cuando el bot está listo
+client.once('ready', () => {
+    console.log(`Conectado como ${client.user.tag}`);
 });
 
-client.on('messageCreate', async (message) => {
-    console.log(`Mensaje recibido: ${message.content}`);
-
-    if (message.author.bot) return;
-
-    if (message.content === `${prefix}ping`) {
-        console.log('Comando !ping recibido');
-        return message.channel.send('Pong!');
-    }
-
+// Comando para reproducir audio
+client.on('messageCreate', (message) => {
     if (message.content.startsWith(`${prefix}play`)) {
         console.log('Comando !play recibido');
         const args = message.content.split(' ');
@@ -86,8 +80,10 @@ client.on('messageCreate', async (message) => {
                 output: "-",
                 format: "bestaudio[ext=webm]",
                 limitRate: "100K", // Evita detección como bot
-                cookies: JSON.stringify(getCookies()) // Usa cookies en JSON
+                cookies: "cookies.txt" // Referencia el archivo cookies.txt
             });
+
+            const { createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 
             const resource = createAudioResource(stream);
             const player = createAudioPlayer();
@@ -111,16 +107,7 @@ client.on('messageCreate', async (message) => {
             message.channel.send('❌ Hubo un error al intentar reproducir la canción.');
         }
     }
-
-    if (message.content === `${prefix}leave`) {
-        if (connection) {
-            connection.destroy();
-            connection = null;
-            message.channel.send('👋 El bot ha salido del canal de voz.');
-        } else {
-            message.channel.send('⚠️ No estoy en un canal de voz.');
-        }
-    }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+// Iniciar el bot con tu token
+client.login('YOUR_BOT_TOKEN');
