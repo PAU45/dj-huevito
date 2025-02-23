@@ -9,6 +9,7 @@ const {
 } = require('@discordjs/voice');
 const ytdl = require('@distube/ytdl-core');
 const { pipeline, PassThrough } = require('stream');
+const fs = require('fs');
 
 const client = new Client({
     intents: [
@@ -21,6 +22,17 @@ const client = new Client({
 
 const prefix = '!';
 let connection;  // Mantener la conexión para evitar múltiples instancias
+
+// Función para cargar las cookies desde cookies.txt
+function getCookies() {
+    const cookiesPath = 'cookies.txt';
+    if (fs.existsSync(cookiesPath)) {
+        return fs.readFileSync(cookiesPath, 'utf8');
+    } else {
+        console.warn('⚠️ No se encontró cookies.txt, YouTube puede bloquear la reproducción.');
+        return '';
+    }
+}
 
 client.on('ready', () => {
     console.log(`${client.user.tag} has logged in!`);
@@ -53,8 +65,13 @@ client.on('messageCreate', async (message) => {
         }
 
         try {
-            // Obtener información del video
-            const info = await ytdl.getInfo(songUrl);
+            // Obtener información del video usando cookies
+            const info = await ytdl.getInfo(songUrl, {
+                requestOptions: {
+                    headers: { cookie: getCookies() }
+                }
+            });
+
             if (!info) {
                 return message.channel.send('❌ No se pudo obtener información del video.');
             }
@@ -77,11 +94,14 @@ client.on('messageCreate', async (message) => {
                 });
             }
 
-            // Crear el stream de audio
+            // Crear el stream de audio con cookies
             const stream = ytdl(songUrl, {
                 filter: 'audioonly',
                 quality: 'highestaudio',
                 highWaterMark: 1 << 25, // Mejora el buffer
+                requestOptions: {
+                    headers: { cookie: getCookies() }
+                }
             });
 
             const passthrough = new PassThrough();
