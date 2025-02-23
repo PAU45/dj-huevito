@@ -25,6 +25,9 @@ try {
     cookies = []; // Si hay un error, inicializa como un arreglo vacío
 }
 
+// Convertir el arreglo de cookies en una cadena de texto
+const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+
 client.on('ready', () => {
     console.log(`${client.user.tag} ha iniciado sesión!`);
 });
