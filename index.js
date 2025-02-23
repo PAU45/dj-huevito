@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const ytdl = require('@distube/ytdl-core'); 
 const fs = require('fs');
-const http = require('http'); // Importa el módulo http
+const http = require('http');
 
 const client = new Client({
     intents: [
@@ -16,29 +16,40 @@ const client = new Client({
 
 const prefix = '!';
 
-// Leer cookies desde cookies.js
 let cookies;
 try {
-    cookies = require('./cookies.js'); // Cambié a cookies.js
+    cookies = require('./cookies.js');
 } catch (err) {
     console.error('Error al leer el archivo de cookies:', err);
-    cookies = []; // Si hay un error, inicializa como un arreglo vacío
+    cookies = [];
 }
 
-// Crear el agente de ytdl usando el nuevo formato de cookies
 const agent = ytdl.createAgent(cookies);
 
 client.on('ready', () => {
     console.log(`${client.user.tag} ha iniciado sesión!`);
 });
 
-// Crear un servidor HTTP para evitar advertencias sobre puertos
-const server = http.createServer();
-const port = process.env.PORT || 10000; // Usa el puerto de la variable de entorno o 10000 como predeterminado
+const server = http.createServer((req, res) => {
+    // Endpoint para ping
+    if (req.url === '/ping') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Pong');
+    } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+    }
+});
+
+const port = process.env.PORT || 10000;
 
 server.listen(port, () => {
     console.log(`Servidor HTTP escuchando en el puerto ${port}`);
 });
+
+// Recurso de silencio
+const silenceBuffer = Buffer.from([...Array(48000)].map(() => 0)); // 1 segundo de silencio
+const silenceResource = createAudioResource(silenceBuffer, { inlineVolume: true });
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
@@ -57,9 +68,7 @@ client.on('messageCreate', async (message) => {
         }
 
         try {
-            const info = await ytdl.getInfo(songUrl, {
-                agent // Usar el agente creado con cookies
-            });
+            const info = await ytdl.getInfo(songUrl, { agent });
 
             const connection = joinVoiceChannel({
                 channelId: channel.id,
@@ -67,15 +76,21 @@ client.on('messageCreate', async (message) => {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            const stream = ytdl(songUrl, { filter: 'audioonly', quality: 'highestaudio', agent });
-            const resource = createAudioResource(stream);
+            const stream = ytdl(songUrl, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25, // Tamaño del buffer
+                agent
+            });
+
             const player = createAudioPlayer();
+            const resource = createAudioResource(stream);
 
             player.play(resource);
             connection.subscribe(player);
 
             player.on(AudioPlayerStatus.Idle, () => {
-                connection.destroy();
+                player.play(silenceResource); // Reproducir silencio al estar inactivo
             });
 
             player.on('error', (error) => {
@@ -90,5 +105,12 @@ client.on('messageCreate', async (message) => {
         }
     }
 });
+
+// Hacer ping a sí mismo cada 5 minutos
+setInterval(() => {
+    http.get(`http://localhost:${port}/ping`, (res) => {
+        console.log(`Ping responded with status code: ${res.statusCode}`);
+    });
+}, 300000); // 300000 ms = 5 minutos
 
 client.login(process.env.DISCORD_TOKEN);
