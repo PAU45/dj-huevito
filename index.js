@@ -129,15 +129,16 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// Hacer ping a sí mismo cada 5 minutos para mantener el bot despierto
+
+
 setInterval(async () => {
     try {
-        await fetch(`http://localhost:${port}/ping`);
+        await fetch(`https://dj-huevito.onrender.com:${port}/ping`);
         console.log('Manteniendo bot despierto...');
     } catch (error) {
         console.error('Error al hacer ping:', error);
     }
-}, 300000); // 300000 ms = 5 minutos
+}, 120000); // 120000 ms = 2 minutos
 
 client.on('disconnect', () => {
     console.log('Bot desconectado. Intentando reconectar...');
