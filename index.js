@@ -94,8 +94,9 @@ client.on('messageCreate', async (message) => {
             });
 
             player.on('error', (error) => {
-                console.error('Error en el reproductor de audio:', error);
+                console.error('Error en el AudioPlayer:', error);
                 connection.destroy();
+                message.channel.send('Hubo un error en la reproducción de audio.');
             });
 
             message.channel.send(`Reproduciendo: ${info.videoDetails.title}`);
@@ -106,11 +107,20 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// Hacer ping a sí mismo cada 5 minutos
-setInterval(() => {
-    http.get(`http://localhost:${port}/ping`, (res) => {
-        console.log(`Ping responded with status code: ${res.statusCode}`);
-    });
+// Hacer ping a sí mismo cada 5 minutos para mantener el bot despierto
+setInterval(async () => {
+    try {
+        await fetch(`http://localhost:${port}/ping`);
+        console.log('Manteniendo bot despierto...');
+    } catch (error) {
+        console.error('Error al hacer ping:', error);
+    }
 }, 300000); // 300000 ms = 5 minutos
 
+client.on('disconnect', () => {
+    console.log('Bot desconectado. Intentando reconectar...');
+    client.login(process.env.DISCORD_TOKEN); // Reemplaza con tu token
+});
+
+// Iniciar sesión en Discord
 client.login(process.env.DISCORD_TOKEN);
