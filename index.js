@@ -133,12 +133,16 @@ client.on('messageCreate', async (message) => {
 
 setInterval(async () => {
     try {
-        await fetch(`https://dj-huevito.onrender.com:${port}/ping`);
+        const response = await fetch(`https://dj-huevito.onrender.com/ping`, { timeout: 20000 }); // 20 segundos de timeout
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         console.log('Manteniendo bot despierto...');
     } catch (error) {
         console.error('Error al hacer ping:', error);
     }
 }, 120000); // 120000 ms = 2 minutos
+
 
 client.on('disconnect', () => {
     console.log('Bot desconectado. Intentando reconectar...');
