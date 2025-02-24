@@ -98,15 +98,27 @@ client.on('messageCreate', async (message) => {
             connection.subscribe(player);
 
             player.on(AudioPlayerStatus.Idle, () => {
-                player.play(silenceResource); // Reproducir silencio al estar inactivo
-                // Limpiar caché si la canción ha terminado
-                cache.delete(songUrl);
+                const nextSong = serverQueue.songs.shift(); // Obtener la siguiente canción
+                if (nextSong) {
+                    play(guild, nextSong); // Reproducir la siguiente canción
+                } else {
+                    player.play(silenceResource); // Reproducir silencio al estar inactivo
+                    // Limpiar caché si la canción ha terminado
+                    cache.delete(songUrl);
+                }
             });
 
             player.on('error', (error) => {
                 console.error('Error en el AudioPlayer:', error);
-                connection.destroy();
-                message.channel.send('Hubo un error en la reproducción de audio.');
+                message.channel.send('Hubo un error en la reproducción de audio. Intentando continuar...');
+                
+                // Intentar reproducir la siguiente canción o silencio
+                const nextSong = serverQueue.songs.shift();
+                if (nextSong) {
+                    play(guild, nextSong); // Reproducir la siguiente canción
+                } else {
+                    player.play(silenceResource); // Reproducir silencio
+                }
             });
 
             message.channel.send(`Reproduciendo: ${info.videoDetails.title}`);
