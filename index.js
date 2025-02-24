@@ -141,8 +141,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('Error al hacer ping:', error);
     }
-}, 120000); // 120000 ms = 2 minutos
-
+}, 300000); // 300000 ms = 5 minutos
 
 client.on('disconnect', () => {
     console.log('Bot desconectado. Intentando reconectar...');
