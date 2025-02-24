@@ -15,6 +15,7 @@ const client = new Client({
 });
 
 const prefix = '!';
+const cache = new Map(); // Mapa para almacenar recursos de audio
 
 let cookies;
 try {
@@ -76,21 +77,30 @@ client.on('messageCreate', async (message) => {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            const stream = ytdl(songUrl, {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25, // Tamaño del buffer
-                agent
-            });
+            // Verificar si el recurso está en el caché
+            let resource;
+            if (cache.has(songUrl)) {
+                console.log(`Usando recurso de caché para: ${info.videoDetails.title}`);
+                resource = cache.get(songUrl);
+            } else {
+                const stream = ytdl(songUrl, {
+                    filter: 'audioonly',
+                    quality: 'highestaudio',
+                    highWaterMark: 1 << 25, // Tamaño del buffer
+                    agent
+                });
+                resource = createAudioResource(stream);
+                cache.set(songUrl, resource); // Almacenar en caché
+            }
 
             const player = createAudioPlayer();
-            const resource = createAudioResource(stream);
-
             player.play(resource);
             connection.subscribe(player);
 
             player.on(AudioPlayerStatus.Idle, () => {
                 player.play(silenceResource); // Reproducir silencio al estar inactivo
+                // Limpiar caché si la canción ha terminado
+                cache.delete(songUrl);
             });
 
             player.on('error', (error) => {
