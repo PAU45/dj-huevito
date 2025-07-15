@@ -77,12 +77,13 @@ client.on('messageCreate', async (message) => {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            // Crear el stream con youtube-dl-exec (Render: sin ejecutable local)
+            // Crear el stream con youtube-dl-exec y pasar cookies
             const stream = youtubedl(songUrl, {
                 output: '-',
                 format: 'bestaudio',
                 retries: 3,
-                socketTimeout: 30
+                socketTimeout: 30,
+                cookies: './youtube_cookies.txt' // Archivo de cookies exportado en formato Netscape
             });
 
             const resource = createAudioResource(stream);
