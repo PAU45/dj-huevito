@@ -76,23 +76,33 @@ client.on('messageCreate', async (message) => {
         for (let i = 0; i < cookiesFiles.length; i++) {
             try {
                 let cookieString = null;
+                let tieneIdentityToken = false;
                 if (cookiesFiles[i] !== null) {
                     const cookies = require(cookiesFiles[i]);
                     cookieString = getCookieString(cookies);
+                    tieneIdentityToken = cookies.some(c => c.name === 'YOUTUBE_IDENTITY_TOKEN');
                 }
-                info = await ytdl.getInfo(songUrl, cookieString ? { requestOptions: { headers: { cookie: cookieString } } } : {});
-                usedCookieString = cookieString;
-                if (i === 0) {
-                    message.channel.send('Reproduciendo en modo anónimo.');
-                } else {
+                // Solo usar cookies si tienen YOUTUBE_IDENTITY_TOKEN
+                if (cookieString && tieneIdentityToken) {
+                    info = await ytdl.getInfo(songUrl, { requestOptions: { headers: { cookie: cookieString } } });
+                    usedCookieString = cookieString;
                     message.channel.send(`Reproduciendo usando cookies${i}.`);
+                    break;
+                } else if (i === 0) {
+                    // Primer intento: modo anónimo
+                    info = await ytdl.getInfo(songUrl, {});
+                    usedCookieString = null;
+                    message.channel.send('Reproduciendo en modo anónimo.');
+                    break;
                 }
-                break;
             } catch (err) {
                 lastError = err;
                 // Si es el último intento, reporta el error
                 if (i === cookiesFiles.length - 1) {
                     console.error('Error al reproducir la canción:', err);
+                    if (String(err).includes('identity token')) {
+                        return message.channel.send('No se puede reproducir este video porque requiere autenticación especial de YouTube.');
+                    }
                     return message.channel.send('Hubo un error al intentar reproducir la canción.');
                 }
             }
