@@ -85,12 +85,6 @@ client.on('messageCreate', async (message) => {
                 socketTimeout: 30
             });
 
-            // Manejar errores de stream
-            stream.on('error', (err) => {
-                console.error('Error en el stream de youtube-dl:', err);
-                message.channel.send('No se pudo obtener el audio del video. Puede estar bloqueado, privado o no disponible.');
-            });
-
             const resource = createAudioResource(stream);
             cache.set(songUrl, resource); // Almacenar en caché
 
