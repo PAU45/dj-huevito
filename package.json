@@ -9,6 +9,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "engines": {
+    "node": ">=18 <21"
+  },
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.18.0",
