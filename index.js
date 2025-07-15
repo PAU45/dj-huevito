@@ -77,13 +77,12 @@ client.on('messageCreate', async (message) => {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            // Crear el stream con youtube-dl-exec y ruta local a yt-dlp.exe
+            // Crear el stream con youtube-dl-exec (Render: sin ejecutable local)
             const stream = youtubedl(songUrl, {
                 output: '-',
                 format: 'bestaudio',
                 retries: 3,
-                socketTimeout: 30,
-                youtubeDl: './yt-dlp.exe' // Usar ejecutable local para máxima compatibilidad
+                socketTimeout: 30
             });
 
             // Manejar errores de stream
