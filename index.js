@@ -1,7 +1,7 @@
 require('dotenv').config(); 
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const ytdl = require('@distube/ytdl-core'); 
+const ytdl = require('ytdl-core');
 const fs = require('fs');
 const http = require('http');
 
