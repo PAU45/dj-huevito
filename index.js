@@ -1,7 +1,7 @@
 require('dotenv').config(); 
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
+const youtubedl = require('youtube-dl-exec');
 const fs = require('fs');
 const http = require('http');
 
@@ -69,51 +69,7 @@ client.on('messageCreate', async (message) => {
             return message.channel.send('¡Necesitas unirte a un canal de voz primero!');
         }
 
-        // Alternar entre anónimo, cookies1, cookies2
-        let info = null;
-        let lastError = null;
-        let usedCookieString = null;
-        for (let i = 0; i < cookiesFiles.length; i++) {
-            try {
-                let cookieString = null;
-                let tieneIdentityToken = false;
-                if (cookiesFiles[i] !== null) {
-                    const cookies = require(cookiesFiles[i]);
-                    cookieString = getCookieString(cookies);
-                    tieneIdentityToken = cookies.some(c => c.name === 'YOUTUBE_IDENTITY_TOKEN');
-                }
-                // Solo usar cookies si tienen YOUTUBE_IDENTITY_TOKEN
-                if (cookieString && tieneIdentityToken) {
-                    info = await ytdl.getInfo(songUrl, { requestOptions: { headers: { cookie: cookieString } } });
-                    usedCookieString = cookieString;
-                    message.channel.send(`Reproduciendo usando cookies${i}.`);
-                    break;
-                } else if (i === 0) {
-                    // Primer intento: modo anónimo
-                    info = await ytdl.getInfo(songUrl, {});
-                    usedCookieString = null;
-                    message.channel.send('Reproduciendo en modo anónimo.');
-                    break;
-                }
-            } catch (err) {
-                lastError = err;
-                // Si es el último intento, reporta el error
-                if (i === cookiesFiles.length - 1) {
-                    console.error('Error al reproducir la canción:', err);
-                    if (String(err).includes('identity token')) {
-                        return message.channel.send('No se puede reproducir este video porque requiere autenticación especial de YouTube.');
-                    }
-                    return message.channel.send('Hubo un error al intentar reproducir la canción.');
-                }
-            }
-        }
-
-        // Verificar si se obtuvo info del video
-        if (!info || !info.videoDetails) {
-            console.error('No se pudo obtener información del video.');
-            return message.channel.send('No se pudo obtener información del video. Es posible que el video esté borrado, privado o bloqueado.');
-        }
-
+        // Reproducir usando youtube-dl-exec (más estable)
         try {
             const connection = joinVoiceChannel({
                 channelId: channel.id,
@@ -121,38 +77,39 @@ client.on('messageCreate', async (message) => {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            // Verificar si el recurso está en el caché
-            let resource;
-            if (cache.has(songUrl)) {
-                console.log(`Usando recurso de caché para: ${info.videoDetails.title}`);
-                resource = cache.get(songUrl);
-            } else {
-                const stream = ytdl(songUrl, {
-                    filter: 'audioonly',
-                    quality: 'highestaudio',
-                    highWaterMark: 1 << 25, // Tamaño del buffer
-                    ...(usedCookieString ? { requestOptions: { headers: { cookie: usedCookieString } } } : {})
-                });
-                resource = createAudioResource(stream);
-                cache.set(songUrl, resource); // Almacenar en caché
-            }
+            // Crear el stream con youtube-dl-exec y ruta local a yt-dlp.exe
+            const stream = youtubedl.raw(songUrl, {
+                output: '-',
+                format: 'bestaudio',
+                // Reintentos y timeout para mayor estabilidad
+                retries: 3,
+                socketTimeout: 30,
+                youtubeDl: './yt-dlp.exe' // Usar ejecutable local para máxima compatibilidad
+            });
+
+            // Manejar errores de stream
+            stream.on('error', (err) => {
+                console.error('Error en el stream de youtube-dl:', err);
+                message.channel.send('No se pudo obtener el audio del video. Puede estar bloqueado, privado o no disponible.');
+            });
+
+            const resource = createAudioResource(stream);
+            cache.set(songUrl, resource); // Almacenar en caché
 
             const player = createAudioPlayer();
             player.play(resource);
             connection.subscribe(player);
 
             player.on(AudioPlayerStatus.Idle, () => {
-                // ...tu lógica de siguiente canción o silencio...
                 cache.delete(songUrl);
             });
 
             player.on('error', (error) => {
                 console.error('Error en el AudioPlayer:', error);
                 message.channel.send('Hubo un error en la reproducción de audio. Intentando continuar...');
-                // ...tu lógica de siguiente canción o silencio...
             });
 
-            message.channel.send(`Reproduciendo: ${info.videoDetails.title}`);
+            message.channel.send(`Reproduciendo: ${songUrl}`);
         } catch (error) {
             console.error('Error al reproducir la canción:', error);
             message.channel.send('Hubo un error al intentar reproducir la canción.');

@@ -21,7 +21,7 @@
     "node-fetch": "^3.3.2",
     "opusscript": "^0.0.8",
     "undici": "^7.11.0",
-    "youtube-dl-exec": "^3.0.15",
+    "youtube-dl-exec": "^3.0.22",
     "ytdl-core": "^4.11.5"
   }
 }
