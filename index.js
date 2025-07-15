@@ -108,6 +108,12 @@ client.on('messageCreate', async (message) => {
             }
         }
 
+        // Verificar si se obtuvo info del video
+        if (!info || !info.videoDetails) {
+            console.error('No se pudo obtener información del video.');
+            return message.channel.send('No se pudo obtener información del video. Es posible que el video esté borrado, privado o bloqueado.');
+        }
+
         try {
             const connection = joinVoiceChannel({
                 channelId: channel.id,
