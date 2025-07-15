@@ -21,13 +21,10 @@ const cache = new Map(); // Mapa para almacenar recursos de audio
 const cookiesFiles = [null, './cookies1.js', './cookies2.js'];
 let cookiesIndex = 0;
 
-function getNextAgent() {
-    cookiesIndex = (cookiesIndex + 1) % cookiesFiles.length;
-    if (cookiesFiles[cookiesIndex] === null) {
-        return null; // anónimo
-    }
-    const cookies = require(cookiesFiles[cookiesIndex]);
-    return ytdl.createAgent(cookies);
+
+// Convierte array de cookies a string para ytdl-core
+function getCookieString(cookies) {
+    return cookies.map(c => `${c.name}=${c.value}`).join('; ');
 }
 
 client.on('ready', () => {
@@ -75,16 +72,16 @@ client.on('messageCreate', async (message) => {
         // Alternar entre anónimo, cookies1, cookies2
         let info = null;
         let lastError = null;
-        let usedAgent = null;
+        let usedCookieString = null;
         for (let i = 0; i < cookiesFiles.length; i++) {
             try {
-                let agent = null;
+                let cookieString = null;
                 if (cookiesFiles[i] !== null) {
                     const cookies = require(cookiesFiles[i]);
-                    agent = ytdl.createAgent(cookies);
+                    cookieString = getCookieString(cookies);
                 }
-                info = await ytdl.getInfo(songUrl, agent ? { agent } : {});
-                usedAgent = agent;
+                info = await ytdl.getInfo(songUrl, cookieString ? { requestOptions: { headers: { cookie: cookieString } } } : {});
+                usedCookieString = cookieString;
                 if (i === 0) {
                     message.channel.send('Reproduciendo en modo anónimo.');
                 } else {
@@ -118,7 +115,7 @@ client.on('messageCreate', async (message) => {
                     filter: 'audioonly',
                     quality: 'highestaudio',
                     highWaterMark: 1 << 25, // Tamaño del buffer
-                    ...(usedAgent ? { agent: usedAgent } : {})
+                    ...(usedCookieString ? { requestOptions: { headers: { cookie: usedCookieString } } } : {})
                 });
                 resource = createAudioResource(stream);
                 cache.set(songUrl, resource); // Almacenar en caché
