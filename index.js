@@ -78,10 +78,9 @@ client.on('messageCreate', async (message) => {
             });
 
             // Crear el stream con youtube-dl-exec y ruta local a yt-dlp.exe
-            const stream = youtubedl.raw(songUrl, {
+            const stream = youtubedl(songUrl, {
                 output: '-',
                 format: 'bestaudio',
-                // Reintentos y timeout para mayor estabilidad
                 retries: 3,
                 socketTimeout: 30,
                 youtubeDl: './yt-dlp.exe' // Usar ejecutable local para máxima compatibilidad
